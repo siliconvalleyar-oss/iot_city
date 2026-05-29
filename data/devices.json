@@ -1,0 +1,362 @@
+{
+  "RTR_001": {
+    "id": "RTR_001",
+    "device_type": "router",
+    "x": 86,
+    "y": 29,
+    "active": true,
+    "powered": true,
+    "level": 69.7,
+    "consumption": 1.0,
+    "signal": -70.7,
+    "connected_to": [
+      "RTR_007",
+      "RTR_004"
+    ],
+    "packets_sent": 14135,
+    "packets_received": 14224,
+    "last_seen": 1777672024.8064535
+  },
+  "RTR_002": {
+    "id": "RTR_002",
+    "device_type": "router",
+    "x": 400,
+    "y": 120,
+    "active": true,
+    "powered": true,
+    "level": 96.4,
+    "consumption": 1.0,
+    "signal": -71.5,
+    "connected_to": [
+      "RTR_007",
+      "RTR_008"
+    ],
+    "packets_sent": 14291,
+    "packets_received": 13867,
+    "last_seen": 1777672024.8065407
+  },
+  "RTR_003": {
+    "id": "RTR_003",
+    "device_type": "router",
+    "x": 650,
+    "y": 120,
+    "active": false,
+    "powered": false,
+    "level": 74.0,
+    "consumption": 44.9,
+    "signal": -89.0,
+    "connected_to": [
+      "RTR_008",
+      "RTR_006"
+    ],
+    "packets_sent": 595,
+    "packets_received": 557,
+    "last_seen": 1777352235.9602156
+  },
+  "RTR_004": {
+    "id": "RTR_004",
+    "device_type": "router",
+    "x": 150,
+    "y": 350,
+    "active": true,
+    "powered": true,
+    "level": 77.7,
+    "consumption": 1.0,
+    "signal": -87.3,
+    "connected_to": [
+      "RTR_007",
+      "RTR_001"
+    ],
+    "packets_sent": 14048,
+    "packets_received": 14149,
+    "last_seen": 1777672024.8065603
+  },
+  "RTR_005": {
+    "id": "RTR_005",
+    "device_type": "router",
+    "x": 400,
+    "y": 350,
+    "active": true,
+    "powered": true,
+    "level": 72.9,
+    "consumption": 1.0,
+    "signal": -44.2,
+    "connected_to": [
+      "RTR_007",
+      "RTR_008"
+    ],
+    "packets_sent": 14082,
+    "packets_received": 14128,
+    "last_seen": 1777672024.8065841
+  },
+  "RTR_006": {
+    "id": "RTR_006",
+    "device_type": "router",
+    "x": 650,
+    "y": 350,
+    "active": true,
+    "powered": true,
+    "level": 95.6,
+    "consumption": 1.0,
+    "signal": -75.4,
+    "connected_to": [
+      "RTR_008",
+      "RTR_003"
+    ],
+    "packets_sent": 14347,
+    "packets_received": 14430,
+    "last_seen": 1777672024.8065922
+  },
+  "RTR_007": {
+    "id": "RTR_007",
+    "device_type": "router",
+    "x": 275,
+    "y": 235,
+    "active": true,
+    "powered": true,
+    "level": 95.8,
+    "consumption": 1.6,
+    "signal": -70.3,
+    "connected_to": [
+      "RTR_001",
+      "RTR_002"
+    ],
+    "packets_sent": 14127,
+    "packets_received": 13932,
+    "last_seen": 1777672024.8065996
+  },
+  "RTR_008": {
+    "id": "RTR_008",
+    "device_type": "router",
+    "x": 525,
+    "y": 235,
+    "active": true,
+    "powered": true,
+    "level": 83.0,
+    "consumption": 3.7,
+    "signal": -82.1,
+    "connected_to": [
+      "RTR_002",
+      "RTR_003"
+    ],
+    "packets_sent": 14249,
+    "packets_received": 14019,
+    "last_seen": 1777672024.8066068
+  },
+  "END_001": {
+    "id": "END_001",
+    "device_type": "end_device",
+    "x": 220,
+    "y": 170,
+    "active": true,
+    "powered": true,
+    "level": 62.8,
+    "consumption": 2.7,
+    "signal": -61.6,
+    "connected_to": [
+      "RTR_007",
+      "RTR_001"
+    ],
+    "packets_sent": 13475,
+    "packets_received": 13451,
+    "last_seen": 1777672024.8066149
+  },
+  "END_002": {
+    "id": "END_002",
+    "device_type": "end_device",
+    "x": 219,
+    "y": -66,
+    "active": true,
+    "powered": true,
+    "level": 83.8,
+    "consumption": 31.0,
+    "signal": -70.5,
+    "connected_to": [
+      "RTR_002",
+      "RTR_007"
+    ],
+    "packets_sent": 13362,
+    "packets_received": 13429,
+    "last_seen": 1777672024.8066218
+  },
+  "END_003": {
+    "id": "END_003",
+    "device_type": "end_device",
+    "x": 480,
+    "y": 170,
+    "active": true,
+    "powered": true,
+    "level": 76.0,
+    "consumption": 3.9,
+    "signal": -99.6,
+    "connected_to": [
+      "RTR_008",
+      "RTR_002"
+    ],
+    "packets_sent": 13547,
+    "packets_received": 13518,
+    "last_seen": 1777672024.806629
+  },
+  "END_004": {
+    "id": "END_004",
+    "device_type": "end_device",
+    "x": 576,
+    "y": -55,
+    "active": true,
+    "powered": true,
+    "level": 88.8,
+    "consumption": 1.0,
+    "signal": -98.5,
+    "connected_to": [
+      "RTR_003",
+      "RTR_008"
+    ],
+    "packets_sent": 13482,
+    "packets_received": 13569,
+    "last_seen": 1777672024.806636
+  },
+  "END_005": {
+    "id": "END_005",
+    "device_type": "end_device",
+    "x": 234,
+    "y": 506,
+    "active": true,
+    "powered": false,
+    "level": 76.9,
+    "consumption": 16.1,
+    "signal": -96.7,
+    "connected_to": [
+      "RTR_004",
+      "RTR_005"
+    ],
+    "packets_sent": 1340,
+    "packets_received": 1266,
+    "last_seen": 1777657334.2525349
+  },
+  "END_006": {
+    "id": "END_006",
+    "device_type": "end_device",
+    "x": 402,
+    "y": 230,
+    "active": true,
+    "powered": true,
+    "level": 71.5,
+    "consumption": 24.5,
+    "signal": -57.1,
+    "connected_to": [
+      "RTR_007",
+      "RTR_005"
+    ],
+    "packets_sent": 13574,
+    "packets_received": 13323,
+    "last_seen": 1777672024.8066435
+  },
+  "END_007": {
+    "id": "END_007",
+    "device_type": "end_device",
+    "x": 559,
+    "y": 483,
+    "active": false,
+    "powered": false,
+    "level": 89.2,
+    "consumption": 37.2,
+    "signal": -100,
+    "connected_to": [
+      "RTR_005",
+      "RTR_006"
+    ],
+    "packets_sent": 50,
+    "packets_received": 47,
+    "last_seen": 1777352235.9602532
+  },
+  "END_008": {
+    "id": "END_008",
+    "device_type": "end_device",
+    "x": 580,
+    "y": 280,
+    "active": true,
+    "powered": true,
+    "level": 70.0,
+    "consumption": 94.5,
+    "signal": -53.8,
+    "connected_to": [
+      "RTR_008",
+      "RTR_006"
+    ],
+    "packets_sent": 13709,
+    "packets_received": 13403,
+    "last_seen": 1777672024.8066506
+  },
+  "END_009": {
+    "id": "END_009",
+    "device_type": "end_device",
+    "x": -13,
+    "y": 261,
+    "active": true,
+    "powered": true,
+    "level": 80.9,
+    "consumption": 6.1,
+    "signal": -56.2,
+    "connected_to": [
+      "RTR_001",
+      "RTR_004"
+    ],
+    "packets_sent": 13471,
+    "packets_received": 13577,
+    "last_seen": 1777672024.8066576
+  },
+  "END_010": {
+    "id": "END_010",
+    "device_type": "end_device",
+    "x": 700,
+    "y": 235,
+    "active": true,
+    "powered": true,
+    "level": 81.0,
+    "consumption": 1.0,
+    "signal": -53.2,
+    "connected_to": [
+      "RTR_003",
+      "RTR_006"
+    ],
+    "packets_sent": 13358,
+    "packets_received": 13296,
+    "last_seen": 1777672024.8066645
+  },
+  "END_011": {
+    "id": "END_011",
+    "device_type": "end_device",
+    "x": 387,
+    "y": 499,
+    "active": false,
+    "powered": false,
+    "level": 71.0,
+    "consumption": 74.5,
+    "signal": -98.1,
+    "connected_to": [
+      "RTR_005",
+      "RTR_007"
+    ],
+    "packets_sent": 152,
+    "packets_received": 126,
+    "last_seen": 1777352235.9602659
+  },
+  "END_012": {
+    "id": "END_012",
+    "device_type": "end_device",
+    "x": 462,
+    "y": -52,
+    "active": true,
+    "powered": true,
+    "level": 62.9,
+    "consumption": 1.9,
+    "signal": -67.3,
+    "connected_to": [
+      "RTR_002",
+      "RTR_007"
+    ],
+    "packets_sent": 13624,
+    "packets_received": 13476,
+    "last_seen": 1777672024.8066719
+  }
+}

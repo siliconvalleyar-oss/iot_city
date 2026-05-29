@@ -1,0 +1,595 @@
+#!/usr/bin/env python3
+"""
+IoT City Platform - Backend API
+FastAPI + WebSocket + MQTT Integration
+Port: 5062
+"""
+
+import asyncio
+import json
+import random
+import time
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import paho.mqtt.client as mqtt
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+# ─────────────────────────────────────────────
+# MODELOS
+# ─────────────────────────────────────────────
+
+class DeviceCreate(BaseModel):
+    id: str
+    x: float
+    y: float
+    street: str
+    device_type: str = "router"  # router | end_device
+    icon: str = "lamp"
+    color: str = "#FFD700"
+
+class DeviceUpdate(BaseModel):
+    powered: Optional[bool] = None
+    active: Optional[bool] = None
+    level: Optional[float] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    street: Optional[str] = None
+
+class NetworkEvent(BaseModel):
+    event_type: str  # fail | restore | toggle | update
+    device_id: str
+    data: Optional[Dict] = None
+
+# ─────────────────────────────────────────────
+# ESTADO GLOBAL
+# ─────────────────────────────────────────────
+
+BASE_DIR = Path(__file__).parent.parent
+DATA_FILE = BASE_DIR / "data" / "devices.json"
+DATA_FILE.parent.mkdir(exist_ok=True)
+
+def load_devices():
+    if DATA_FILE.exists():
+        return json.loads(DATA_FILE.read_text())
+    return generate_demo_city()
+
+def save_devices(devices):
+    DATA_FILE.write_text(json.dumps(devices, indent=2))
+
+def generate_demo_city():
+    """Genera ciudad demo con 20 dispositivos en red mesh."""
+    streets = [
+        "Av. Mitre", "Av. San Martín", "Calle Belgrano",
+        "Av. Rivadavia", "Calle Sarmiento", "Av. Roca",
+        "Calle Moreno", "Av. Corrientes", "Calle Italia"
+    ]
+    devices = {}
+
+    # Routers en cuadrícula (8 nodos)
+    router_positions = [
+        (150, 120), (400, 120), (650, 120),
+        (150, 350), (400, 350), (650, 350),
+        (275, 235), (525, 235)
+    ]
+    for i, (x, y) in enumerate(router_positions):
+        did = f"RTR_{i+1:03d}"
+        devices[did] = {
+            "id": did,
+            "x": x, "y": y,
+            "street": random.choice(streets),
+            "device_type": "router",
+            "active": True,
+            "powered": True,
+            "level": round(random.uniform(70, 100), 1),
+            "consumption": round(random.uniform(50, 150), 1),
+            "icon": "lamp",
+            "color": "#FFD700",
+            "connected_to": [],
+            "end_devices": [],
+            "last_seen": time.time(),
+            "signal": round(random.uniform(-60, -40), 1),
+            "packets_sent": random.randint(100, 1000),
+            "packets_received": random.randint(100, 1000),
+        }
+
+    # End devices (12 nodos)
+    end_positions = [
+        (220, 170), (330, 90), (480, 170), (580, 90),
+        (220, 430), (330, 280), (480, 430), (580, 280),
+        (100, 235), (700, 235), (400, 480), (400, 30)
+    ]
+    for i, (x, y) in enumerate(end_positions):
+        did = f"END_{i+1:03d}"
+        devices[did] = {
+            "id": did,
+            "x": x, "y": y,
+            "street": random.choice(streets),
+            "device_type": "end_device",
+            "active": True,
+            "powered": True,
+            "level": round(random.uniform(60, 100), 1),
+            "consumption": round(random.uniform(20, 80), 1),
+            "icon": "lamp",
+            "color": "#00BFFF",
+            "connected_to": [],
+            "end_devices": [],
+            "last_seen": time.time(),
+            "signal": round(random.uniform(-80, -50), 1),
+            "packets_sent": random.randint(10, 200),
+            "packets_received": random.randint(10, 200),
+        }
+
+    # Calcular conexiones mesh (vecinos más cercanos)
+    dev_list = list(devices.values())
+    for dev in dev_list:
+        distances = []
+        for other in dev_list:
+            if other["id"] == dev["id"]:
+                continue
+            dist = ((dev["x"] - other["x"])**2 + (dev["y"] - other["y"])**2)**0.5
+            distances.append((dist, other["id"]))
+        distances.sort()
+        # Conectar a los 2-3 vecinos más cercanos que sean routers
+        routers = [d for _, d in distances if devices[d]["device_type"] == "router"]
+        dev["connected_to"] = routers[:2] if len(routers) >= 2 else routers
+
+    # Asignar end devices a routers
+    for did, dev in devices.items():
+        if dev["device_type"] == "end_device":
+            if dev["connected_to"]:
+                router_id = dev["connected_to"][0]
+                if router_id in devices:
+                    devices[router_id]["end_devices"].append(did)
+
+    save_devices(devices)
+    return devices
+
+# Estado global
+DEVICES: Dict[str, Any] = load_devices()
+CONNECTED_WS: List[WebSocket] = []
+MQTT_CLIENT: Optional[mqtt.Client] = None
+NETWORK_LOG: List[Dict] = []
+
+# ─────────────────────────────────────────────
+# FASTAPI APP
+# ─────────────────────────────────────────────
+
+app = FastAPI(
+    title="IoT City Platform",
+    description="Plataforma de gestión de luminarias inteligentes y dispositivos urbanos",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Servir frontend
+FRONTEND_PATH = BASE_DIR / "frontend"
+ASSETS_PATH = BASE_DIR / "assets"
+ASSETS_PATH.mkdir(parents=True, exist_ok=True)
+(ASSETS_PATH / "icons").mkdir(exist_ok=True)
+
+if FRONTEND_PATH.exists():
+    app.mount("/assets", StaticFiles(directory=str(ASSETS_PATH)), name="assets")
+
+# ─────────────────────────────────────────────
+# WEBSOCKET MANAGER
+# ─────────────────────────────────────────────
+
+async def broadcast(message: Dict):
+    """Enviar mensaje a todos los clientes WebSocket."""
+    dead = []
+    for ws in CONNECTED_WS:
+        try:
+            await ws.send_json(message)
+        except Exception:
+            dead.append(ws)
+    for ws in dead:
+        CONNECTED_WS.remove(ws)
+
+def log_event(event_type: str, device_id: str, detail: str = ""):
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "event_type": event_type,
+        "device_id": device_id,
+        "detail": detail
+    }
+    NETWORK_LOG.append(entry)
+    if len(NETWORK_LOG) > 500:
+        NETWORK_LOG.pop(0)
+    return entry
+
+# ─────────────────────────────────────────────
+# MQTT
+# ─────────────────────────────────────────────
+
+def setup_mqtt():
+    global MQTT_CLIENT
+    try:
+        client = mqtt.Client(client_id="iot-city-backend")
+
+        def on_connect(c, userdata, flags, rc):
+            if rc == 0:
+                print("✅ MQTT conectado")
+                c.subscribe("iot/city/#")
+            else:
+                print(f"⚠️  MQTT error rc={rc}")
+
+        def on_message(c, userdata, msg):
+            try:
+                payload = json.loads(msg.payload.decode())
+                topic = msg.topic
+                if "device/" in topic:
+                    parts = topic.split("/")
+                    did = parts[2] if len(parts) > 2 else None
+                    if did and did in DEVICES:
+                        DEVICES[did].update(payload)
+                        DEVICES[did]["last_seen"] = time.time()
+                        save_devices(DEVICES)
+                        asyncio.run_coroutine_threadsafe(
+                            broadcast({"type": "device_update", "device": DEVICES[did]}),
+                            asyncio.get_event_loop()
+                        )
+            except Exception as e:
+                print(f"MQTT msg error: {e}")
+
+        client.on_connect = on_connect
+        client.on_message = on_message
+        client.connect("localhost", 1883, 60)
+        client.loop_start()
+        MQTT_CLIENT = client
+        return client
+    except Exception as e:
+        print(f"⚠️  MQTT no disponible: {e}")
+        return None
+
+# ─────────────────────────────────────────────
+# SIMULACIÓN DE RED
+# ─────────────────────────────────────────────
+
+async def simulate_network():
+    """Simula actividad de red Zigbee en tiempo real."""
+    while True:
+        await asyncio.sleep(3)
+        for did, dev in DEVICES.items():
+            if not dev.get("powered", True):
+                continue
+
+            # Fluctuación de consumo
+            dev["consumption"] = round(
+                dev["consumption"] * random.uniform(0.95, 1.05), 1
+            )
+            # Fluctuación de señal
+            dev["signal"] = round(
+                max(-100, min(-30, dev["signal"] + random.uniform(-2, 2))), 1
+            )
+            # Paquetes
+            dev["packets_sent"] += random.randint(0, 5)
+            dev["packets_received"] += random.randint(0, 5)
+            dev["last_seen"] = time.time()
+
+        save_devices(DEVICES)
+        metrics = get_metrics()
+        await broadcast({
+            "type": "network_update",
+            "devices": DEVICES,
+            "metrics": metrics
+        })
+
+def get_metrics():
+    devs = list(DEVICES.values())
+    total = len(devs)
+    powered = sum(1 for d in devs if d.get("powered", True))
+    active = sum(1 for d in devs if d.get("active", True))
+    total_consumption = round(sum(d.get("consumption", 0) for d in devs if d.get("powered", True)), 1)
+    routers = sum(1 for d in devs if d.get("device_type") == "router")
+    end_devs = total - routers
+    return {
+        "total_devices": total,
+        "powered": powered,
+        "unpowered": total - powered,
+        "active": active,
+        "inactive": total - active,
+        "routers": routers,
+        "end_devices": end_devs,
+        "total_consumption_w": total_consumption,
+        "network_health": round((powered / total * 100) if total else 0, 1),
+        "timestamp": time.time()
+    }
+
+# ─────────────────────────────────────────────
+# ENDPOINTS REST
+# ─────────────────────────────────────────────
+
+@app.get("/")
+async def root():
+    index = FRONTEND_PATH / "index.html"
+    if index.exists():
+        return FileResponse(str(index))
+    return {"status": "IoT City API running", "docs": "/api/docs"}
+
+@app.get("/api/devices")
+async def get_devices():
+    return {"devices": list(DEVICES.values()), "count": len(DEVICES)}
+
+@app.get("/api/devices/{device_id}")
+async def get_device(device_id: str):
+    if device_id not in DEVICES:
+        raise HTTPException(404, f"Dispositivo {device_id} no encontrado")
+    return DEVICES[device_id]
+
+@app.post("/api/devices")
+async def create_device(device: DeviceCreate):
+    if device.id in DEVICES:
+        raise HTTPException(409, f"Dispositivo {device.id} ya existe")
+
+    new_dev = {
+        "id": device.id,
+        "x": device.x,
+        "y": device.y,
+        "street": device.street,
+        "device_type": device.device_type,
+        "active": True,
+        "powered": True,
+        "level": 100.0,
+        "consumption": random.uniform(30, 100),
+        "icon": device.icon,
+        "color": device.color,
+        "connected_to": [],
+        "end_devices": [],
+        "last_seen": time.time(),
+        "signal": round(random.uniform(-70, -40), 1),
+        "packets_sent": 0,
+        "packets_received": 0,
+    }
+
+    # Calcular conexiones automáticas
+    distances = []
+    for did, dev in DEVICES.items():
+        dist = ((new_dev["x"] - dev["x"])**2 + (new_dev["y"] - dev["y"])**2)**0.5
+        distances.append((dist, did))
+    distances.sort()
+    routers = [d for _, d in distances if DEVICES[d]["device_type"] == "router"]
+    new_dev["connected_to"] = routers[:2]
+
+    DEVICES[device.id] = new_dev
+    save_devices(DEVICES)
+
+    entry = log_event("device_added", device.id, f"Tipo: {device.device_type}")
+    await broadcast({"type": "device_added", "device": new_dev, "log": entry})
+
+    if MQTT_CLIENT:
+        MQTT_CLIENT.publish(f"iot/city/device/{device.id}/status", json.dumps({"status": "new", "device": new_dev}))
+
+    return new_dev
+
+@app.patch("/api/devices/{device_id}")
+async def update_device(device_id: str, update: DeviceUpdate):
+    if device_id not in DEVICES:
+        raise HTTPException(404, f"Dispositivo {device_id} no encontrado")
+
+    dev = DEVICES[device_id]
+    changes = update.dict(exclude_none=True)
+    dev.update(changes)
+    dev["last_seen"] = time.time()
+    save_devices(DEVICES)
+
+    entry = log_event("device_updated", device_id, str(changes))
+    await broadcast({"type": "device_update", "device": dev, "log": entry})
+
+    if MQTT_CLIENT:
+        MQTT_CLIENT.publish(f"iot/city/device/{device_id}/update", json.dumps(changes))
+
+    return dev
+
+@app.delete("/api/devices/{device_id}")
+async def delete_device(device_id: str):
+    if device_id not in DEVICES:
+        raise HTTPException(404, f"Dispositivo {device_id} no encontrado")
+
+    del DEVICES[device_id]
+    # Limpiar referencias
+    for dev in DEVICES.values():
+        dev["connected_to"] = [d for d in dev.get("connected_to", []) if d != device_id]
+        dev["end_devices"] = [d for d in dev.get("end_devices", []) if d != device_id]
+
+    save_devices(DEVICES)
+    entry = log_event("device_removed", device_id)
+    await broadcast({"type": "device_removed", "device_id": device_id, "log": entry})
+    return {"deleted": device_id}
+
+@app.post("/api/devices/{device_id}/toggle")
+async def toggle_device(device_id: str):
+    if device_id not in DEVICES:
+        raise HTTPException(404, f"Dispositivo {device_id} no encontrado")
+    dev = DEVICES[device_id]
+    dev["active"] = not dev.get("active", True)
+    dev["last_seen"] = time.time()
+    save_devices(DEVICES)
+    entry = log_event("device_toggled", device_id, f"active={dev['active']}")
+    await broadcast({"type": "device_update", "device": dev, "log": entry})
+    return dev
+
+@app.post("/api/devices/{device_id}/power")
+async def toggle_power(device_id: str):
+    if device_id not in DEVICES:
+        raise HTTPException(404, f"Dispositivo {device_id} no encontrado")
+    dev = DEVICES[device_id]
+    dev["powered"] = not dev.get("powered", True)
+    if not dev["powered"]:
+        dev["active"] = False
+    dev["last_seen"] = time.time()
+    save_devices(DEVICES)
+    entry = log_event("power_event", device_id, f"powered={dev['powered']}")
+    await broadcast({"type": "device_update", "device": dev, "log": entry})
+    return dev
+
+@app.post("/api/simulate/blackout")
+async def simulate_blackout(area: Dict = None):
+    """Simula corte de energía en área o total."""
+    affected = []
+    for did, dev in DEVICES.items():
+        dev["powered"] = False
+        dev["active"] = False
+        affected.append(did)
+    save_devices(DEVICES)
+    entry = log_event("blackout", "ALL", f"Afectados: {len(affected)}")
+    await broadcast({"type": "blackout", "affected": affected, "log": entry})
+    return {"affected": len(affected)}
+
+@app.post("/api/simulate/restore")
+async def simulate_restore():
+    """Restaura energía en toda la red."""
+    for dev in DEVICES.values():
+        dev["powered"] = True
+        dev["active"] = True
+    save_devices(DEVICES)
+    entry = log_event("restore", "ALL", "Red restaurada")
+    await broadcast({"type": "restore", "devices": DEVICES, "log": entry})
+    return {"restored": len(DEVICES)}
+
+@app.post("/api/simulate/fail/{device_id}")
+async def simulate_fail(device_id: str):
+    """Simula caída de nodo."""
+    if device_id not in DEVICES:
+        raise HTTPException(404)
+    dev = DEVICES[device_id]
+    dev["powered"] = False
+    dev["active"] = False
+    save_devices(DEVICES)
+    entry = log_event("node_failure", device_id)
+    await broadcast({"type": "device_update", "device": dev, "log": entry})
+    return dev
+
+@app.get("/api/metrics")
+async def metrics():
+    return get_metrics()
+
+@app.get("/api/logs")
+async def get_logs(limit: int = 100):
+    return {"logs": NETWORK_LOG[-limit:], "total": len(NETWORK_LOG)}
+
+@app.get("/api/mesh")
+async def get_mesh():
+    """Retorna la topología de red mesh."""
+    links = []
+    seen = set()
+    for did, dev in DEVICES.items():
+        if not dev.get("powered", True):
+            continue
+        for neighbor in dev.get("connected_to", []):
+            link_key = tuple(sorted([did, neighbor]))
+            if link_key not in seen and neighbor in DEVICES:
+                seen.add(link_key)
+                n_dev = DEVICES[neighbor]
+                strength = 1.0 if (dev.get("powered") and n_dev.get("powered")) else 0.0
+                links.append({
+                    "source": did,
+                    "target": neighbor,
+                    "strength": strength,
+                    "active": dev.get("active", True) and n_dev.get("active", True)
+                })
+    return {"links": links, "nodes": list(DEVICES.values())}
+
+@app.post("/api/icons/upload")
+async def upload_icon(file: UploadFile = File(...)):
+    """Sube nuevo ícono SVG/PNG."""
+    icons_dir = ASSETS_PATH / "icons"
+    icons_dir.mkdir(exist_ok=True)
+    dest = icons_dir / file.filename
+    dest.write_bytes(await file.read())
+    return {"icon": file.filename, "path": f"/assets/icons/{file.filename}"}
+
+@app.get("/api/icons")
+async def list_icons():
+    icons_dir = ASSETS_PATH / "icons"
+    icons_dir.mkdir(exist_ok=True)
+    icons = [f.name for f in icons_dir.iterdir() if f.suffix in [".svg", ".png", ".webp"]]
+    return {"icons": icons}
+
+# ─────────────────────────────────────────────
+# WEBSOCKET
+# ─────────────────────────────────────────────
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
+    CONNECTED_WS.append(ws)
+
+    # Enviar estado inicial
+    await ws.send_json({
+        "type": "init",
+        "devices": DEVICES,
+        "metrics": get_metrics(),
+        "logs": NETWORK_LOG[-50:]
+    })
+
+    try:
+        while True:
+            data = await ws.receive_json()
+            msg_type = data.get("type")
+
+            if msg_type == "ping":
+                await ws.send_json({"type": "pong", "ts": time.time()})
+
+            elif msg_type == "toggle":
+                did = data.get("device_id")
+                if did in DEVICES:
+                    DEVICES[did]["active"] = not DEVICES[did].get("active", True)
+                    save_devices(DEVICES)
+                    await broadcast({"type": "device_update", "device": DEVICES[did]})
+
+            elif msg_type == "move":
+                did = data.get("device_id")
+                if did in DEVICES:
+                    DEVICES[did]["x"] = data.get("x", DEVICES[did]["x"])
+                    DEVICES[did]["y"] = data.get("y", DEVICES[did]["y"])
+                    save_devices(DEVICES)
+                    await broadcast({"type": "device_update", "device": DEVICES[did]})
+
+    except WebSocketDisconnect:
+        CONNECTED_WS.remove(ws)
+
+# ─────────────────────────────────────────────
+# STARTUP
+# ─────────────────────────────────────────────
+
+@app.on_event("startup")
+async def startup():
+    setup_mqtt()
+    asyncio.create_task(simulate_network())
+
+    # ── Integración Dashboard de Energía ──
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(BASE_DIR))
+        from backend.dashboard_patch import apply_patch
+        _bg_tasks = []
+        if apply_patch(app, DEVICES, _bg_tasks):
+            for task_fn in _bg_tasks:
+                asyncio.create_task(task_fn())
+    except Exception as _e:
+        print(f"⚠️  Dashboard patch: {_e}")
+
+    print("🚀 IoT City Backend en http://localhost:5062")
+    print(f"📡 Dispositivos: {len(DEVICES)}")
+    print("📊 Dashboard:    http://localhost:5062/dashboard")
+    print("📚 API Docs:     http://localhost:5062/api/docs")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=5062, reload=True)

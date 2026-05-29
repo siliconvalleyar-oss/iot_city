@@ -1,0 +1,33 @@
+ID,X,Y,TIPO,CALLE,ICON,COLOR
+LMP_013,550,100,router,Av. Corrientes 1200,lamp,#FFD700
+LMP_014,700,120,router,Av. Corrientes 1400,lamp,#FFD700
+LMP_015,80,350,end_device,Calle Sarmiento 45,lamp,#FFD700
+LMP_016,250,450,end_device,Calle Moreno 220,lamp,#FFD700
+LMP_017,500,500,end_device,Av. Roca 670,lamp,#FFD700
+LMP_018,650,520,end_device,Av. Roca 890,lamp,#FFD700
+LMP_019,350,550,end_device,Calle Italia 333,lamp,#FFD700
+LMP_020,120,580,end_device,Calle Belgrano 1010,lamp,#FFD700
+TRF_002,300,200,router,Av. San Martín y Av. Mitre,traffic,#FF6600
+TRF_003,550,300,router,Av. Roca y Av. Corrientes,traffic,#FF6600
+SNS_002,100,480,end_device,Calle Moreno 789,sensor,#00BFFF
+SNS_003,480,80,end_device,Av. Mitre 450,sensor,#00BFFF
+SNS_004,600,420,end_device,Calle Sarmiento 555,sensor,#00BFFF
+SNS_005,200,600,end_device,Calle Italia 90,sensor,#00BFFF
+CAM_002,420,280,end_device,Av. Rivadavia 320,camera,#888888
+CAM_003,680,380,end_device,Av. Rivadavia 750,camera,#888888
+CAM_004,50,220,end_device,Calle Belgrano 70,camera,#888888
+GTW_002,150,150,router,Subestación Norte,gateway,#00FF88
+GTW_003,680,480,router,Subestación Sur,gateway,#00FF88
+SGN_001,400,50,end_device,Av. Mitre 800,sign,#FFA500
+SGN_002,400,550,end_device,Av. Roca 400,sign,#FFA500
+LMP_021,300,300,end_device,Av. Corrientes 1111,lamp,#FFD700
+LMP_022,500,200,end_device,Av. San Martín 333,lamp,#FFD700
+LMP_023,200,400,end_device,Calle Belgrano 777,lamp,#FFD700
+LMP_024,700,300,end_device,Av. Roca 123,lamp,#FFD700
+SNS_006,350,400,end_device,Intersección Moreno, sensor,#00BFFF
+SNS_007,450,150,end_device,Intersección San Martín,sensor,#00BFFF
+TRF_004,200,300,router,Av. Mitre y Belgrano,traffic,#FF6600
+TRF_005,600,150,router,Av. Corrientes y San Martín,traffic,#FF6600
+CAM_005,100,100,end_device,Av. Mitre 50,camera,#888888
+CAM_006,720,150,end_device,Av. Corrientes 800,camera,#888888
+LMP_025,630,50,end_device,Av. Mitre 600,lamp,#FFD700

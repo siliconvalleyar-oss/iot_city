@@ -1,0 +1,108 @@
+{
+  "ts": 1777661700.0062473,
+  "dt": "2026-05-01T15:55:00.006248",
+  "summary": {
+    "timestamp": 1777661700.03573,
+    "uptime_s": 4450.240447998047,
+    "total_nodes": 20,
+    "total_power_mW": 7.46,
+    "total_power_W": 0.0075,
+    "total_energy_mWh": 9.2421,
+    "estimated_daily_Wh": 0.18,
+    "avg_efficiency_score": 100,
+    "top_consumers": [
+      [
+        "END_012",
+        0.57
+      ],
+      [
+        "END_010",
+        0.55
+      ],
+      [
+        "END_001",
+        0.51
+      ],
+      [
+        "END_006",
+        0.5
+      ],
+      [
+        "RTR_002",
+        0.49
+      ]
+    ],
+    "zones": [
+      "zona-norte",
+      "zona-centro",
+      "zona-sur"
+    ]
+  },
+  "zones": {
+    "zona-norte": {
+      "zone": "zona-norte",
+      "node_count": 7,
+      "node_ids": [
+        "RTR_001",
+        "RTR_004",
+        "RTR_007",
+        "END_002",
+        "END_005",
+        "END_008",
+        "END_011"
+      ],
+      "total_power_mW": 2.18,
+      "total_power_W": 0.0022,
+      "avg_power_per_node_mW": 0.31,
+      "total_energy_mWh": 2.7101,
+      "active_nodes": 7,
+      "inactive_nodes": 0,
+      "total_packets_tx": 16622,
+      "total_packets_rx": 28037,
+      "avg_efficiency_score": 100.0
+    },
+    "zona-centro": {
+      "zone": "zona-centro",
+      "node_count": 7,
+      "node_ids": [
+        "RTR_002",
+        "RTR_005",
+        "RTR_008",
+        "END_003",
+        "END_006",
+        "END_009",
+        "END_012"
+      ],
+      "total_power_mW": 3.34,
+      "total_power_W": 0.0033,
+      "avg_power_per_node_mW": 0.48,
+      "total_energy_mWh": 4.14,
+      "active_nodes": 7,
+      "inactive_nodes": 0,
+      "total_packets_tx": 23170,
+      "total_packets_rx": 38847,
+      "avg_efficiency_score": 100.0
+    },
+    "zona-sur": {
+      "zone": "zona-sur",
+      "node_count": 6,
+      "node_ids": [
+        "RTR_003",
+        "RTR_006",
+        "END_001",
+        "END_004",
+        "END_007",
+        "END_010"
+      ],
+      "total_power_mW": 1.94,
+      "total_power_W": 0.0019,
+      "avg_power_per_node_mW": 0.32,
+      "total_energy_mWh": 2.392,
+      "active_nodes": 6,
+      "inactive_nodes": 0,
+      "total_packets_tx": 13341,
+      "total_packets_rx": 22108,
+      "avg_efficiency_score": 100.0
+    }
+  }
+}

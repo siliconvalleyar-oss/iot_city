@@ -1,0 +1,8 @@
+# Formato: ID,X,Y,TIPO,CALLE,ICON,COLOR
+LAMP_010,150,100,router,Av. Mitre 100,lamp,#FFD700
+LAMP_011,300,100,router,Av. Mitre 200,lamp,#FFD700
+LAMP_012,450,100,end_device,Av. Mitre 300,lamp,#FFD700
+SENSOR_01,200,250,end_device,Calle Belgrano,sensor,#00BFFF
+TRF_001,400,350,router,Intersección Corrientes,traffic,#FF6600
+CAM_001,600,200,end_device,Av. San Martín,camera,#888888
+GW_EXT,700,400,router,Centro de Control,gateway,#00FF88

@@ -1,0 +1,63 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Entornos virtuales
+venv/
+scripts/venv/
+.env
+.venv
+env/
+ENV/
+
+# Directorios de compilación
+stuff/
+obj/
+bin/
+build/
+examples/obj/
+examples/bin/
+
+# Logs
+logs/
+*.log
+
+# Archivos objeto y ejecutables
+*.o
+*.exe
+*.out
+*.a
+*.so
+.DS_Store
+
+# Archivos temporales
+*.swp
+*.swo
+*~
+*.d
+
+# IDE
+.vscode/
+.idea/
+*.user
+
+# Archivos específicos
+token.md
+fix.sh
+prompt.md
+
+# Directorios de salida
+analytics/__pycache__/
+backend/__pycache__/
+dashboard/__pycache__/
+energy/__pycache__/
+mqtt/__pycache__/
+simulator/__pycache__/
+src/*.o
+
+# Assets (excepto los íconos)
+assets/*
+!assets/icons/
