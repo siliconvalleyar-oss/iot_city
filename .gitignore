@@ -54,6 +54,7 @@ prompt.txt
 
 # Métricas generadas automáticamente
 data/metrics/
+data/settings.json
 
 # Entorno y configuración local
 .env

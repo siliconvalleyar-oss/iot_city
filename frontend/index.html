@@ -642,6 +642,57 @@
     border-color: var(--accent);
     background: rgba(0,212,255,0.1);
   }
+
+  /* ── ADMIN MODAL ── */
+  #admin-modal {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 24px;
+    width: 700px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .palette-card {
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .palette-card:hover { border-color: var(--accent); }
+  .palette-card.active { border-color: var(--accent); background: rgba(0,212,255,0.08); }
+
+  .palette-preview {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 4px;
+    justify-content: center;
+  }
+
+  .palette-preview span {
+    width: 18px; height: 18px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  .palette-name {
+    font-size: 9px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
 </style>
 </head>
 <body>
@@ -685,6 +736,7 @@
     <button class="btn danger" onclick="simulateBlackout()">⚡ Corte</button>
     <button class="btn success" onclick="simulateRestore()">✓ Restaurar</button>
     <button class="btn" onclick="openApiDocs()">API Docs</button>
+    <button class="btn" onclick="openAdmin()">⚙ Admin</button>
   </div>
 </div>
 
@@ -830,6 +882,51 @@
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn success" onclick="addDevice()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div id="admin-overlay" onclick="if(event.target===this)closeAdmin()">
+  <div id="admin-modal">
+    <div class="modal-title">⚙ Administración</div>
+
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <!-- Palette -->
+      <div style="flex:1;min-width:200px">
+        <div class="form-label">Paleta de colores</div>
+        <div class="palette-grid" id="palette-grid"></div>
+      </div>
+
+      <!-- Settings -->
+      <div style="flex:1;min-width:200px">
+        <div class="form-group">
+          <label class="form-label">Host MQTT</label>
+          <input class="form-input" id="s-mqtt-host" value="localhost">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Intervalo simulación (s)</label>
+          <input class="form-input" id="s-sim-interval" type="number" value="3" min="1" max="30">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Zoom predeterminado</label>
+          <input class="form-input" id="s-zoom" type="number" value="1" min="0.2" max="4" step="0.1">
+        </div>
+      </div>
+
+      <!-- Data management -->
+      <div style="flex:1;min-width:200px">
+        <div class="form-label">Datos</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+          <button class="btn success" onclick="exportData()" style="text-align:center">📥 Exportar JSON</button>
+          <button class="btn danger" onclick="resetData()" style="text-align:center">⟳ Reset a demo</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn" onclick="closeAdmin()">Cerrar</button>
+      <button class="btn success" onclick="saveAdmin()">Guardar</button>
     </div>
   </div>
 </div>
@@ -1610,6 +1707,12 @@ function connectWS() {
       if (msg.devices) devices = msg.devices;
       if (msg.log) addLog(msg.log);
       updateUI();
+    } else if (msg.type === 'settings_update') {
+      if (msg.palettes) palettes = msg.palettes;
+      if (msg.settings?.palette) applyPalette(msg.settings.palette);
+    } else if (msg.type === 'system_reset') {
+      if (msg.devices) devices = msg.devices;
+      updateUI();
     }
   };
 }
@@ -1619,12 +1722,116 @@ function openApiDocs() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
+// ADMIN
+// ──────────────────────────────────────────────────────────────────────────
+
+let palettes = {};
+
+async function openAdmin() {
+  const res = await apiFetch('/admin/settings');
+  const palRes = await apiFetch('/admin/palettes');
+  palettes = palRes;
+
+  document.getElementById('s-mqtt-host').value = res.mqtt_host || 'localhost';
+  document.getElementById('s-sim-interval').value = res.sim_interval || 3;
+  document.getElementById('s-zoom').value = res.zoom_default || 1;
+
+  const grid = document.getElementById('palette-grid');
+  grid.innerHTML = '';
+  for (const [name, colors] of Object.entries(palRes)) {
+    const card = document.createElement('div');
+    card.className = 'palette-card' + (name === res.palette ? ' active' : '');
+    card.dataset.name = name;
+    card.innerHTML = `
+      <div class="palette-preview">
+        <span style="background:${colors.bg}"></span>
+        <span style="background:${colors.panel}"></span>
+        <span style="background:${colors.border}"></span>
+        <span style="background:${colors.accent}"></span>
+        <span style="background:${colors.text}"></span>
+      </div>
+      <div class="palette-name">${name}</div>
+    `;
+    card.onclick = () => {
+      document.querySelectorAll('.palette-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      applyPalette(name);
+    };
+    grid.appendChild(card);
+  }
+
+  document.getElementById('admin-overlay').classList.add('open');
+}
+
+function closeAdmin() {
+  document.getElementById('admin-overlay').classList.remove('open');
+}
+
+async function saveAdmin() {
+  const palette = document.querySelector('.palette-card.active')?.dataset.name || 'cyberpunk';
+  const settings = {
+    palette,
+    mqtt_host: document.getElementById('s-mqtt-host').value,
+    sim_interval: parseInt(document.getElementById('s-sim-interval').value) || 3,
+    zoom_default: parseFloat(document.getElementById('s-zoom').value) || 1,
+  };
+  await apiFetch('/admin/settings', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  });
+  notify('Configuración guardada', 'ok');
+  closeAdmin();
+}
+
+function applyPalette(name) {
+  const colors = palettes[name];
+  if (!colors) return;
+  const root = document.documentElement;
+  for (const [key, val] of Object.entries(colors)) {
+    root.style.setProperty(`--${key}`, val);
+  }
+}
+
+async function exportData() {
+  const data = await apiFetch('/admin/export');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `iot-city-export-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  notify('Datos exportados', 'ok');
+}
+
+async function resetData() {
+  if (!confirm('¿Reiniciar todos los dispositivos a la ciudad demo?')) return;
+  const res = await apiFetch('/admin/reset', { method: 'POST' });
+  devices = {};
+  await loadDevices();
+  closeAdmin();
+  notify(`Ciudad demo reiniciada (${res.count} dispositivos)`, 'ok');
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 // INIT
 // ──────────────────────────────────────────────────────────────────────────
 
 async function init() {
   resetView();
-  await loadDevices();
+  const [settings, palRes] = await Promise.all([
+    apiFetch('/admin/settings'),
+    apiFetch('/admin/palettes'),
+    loadDevices(),
+  ]);
+  palettes = palRes;
+  const savedPal = palRes[settings.palette] || Object.values(palRes)[0];
+  if (savedPal) {
+    const root = document.documentElement;
+    for (const [key, val] of Object.entries(savedPal)) {
+      root.style.setProperty(`--${key}`, val);
+    }
+  }
   connectWS();
   draw();
 }

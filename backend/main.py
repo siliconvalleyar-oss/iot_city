@@ -565,6 +565,108 @@ async def websocket_endpoint(ws: WebSocket):
         CONNECTED_WS.remove(ws)
 
 # ─────────────────────────────────────────────
+# ADMIN SETTINGS
+# ─────────────────────────────────────────────
+
+SETTINGS_FILE = BASE_DIR / "data" / "settings.json"
+
+DEFAULT_SETTINGS = {
+    "palette": "cyberpunk",
+    "mqtt_host": "localhost",
+    "mqtt_port": 1883,
+    "sim_interval": 3,
+    "zoom_default": 1,
+}
+
+def load_settings():
+    if SETTINGS_FILE.exists():
+        try:
+            return json.loads(SETTINGS_FILE.read_text())
+        except Exception:
+            pass
+    return dict(DEFAULT_SETTINGS)
+
+def save_settings(settings):
+    SETTINGS_FILE.write_text(json.dumps(settings, indent=2))
+
+SETTINGS = load_settings()
+
+PALETTES = {
+    "cyberpunk": {
+        "bg": "#050d1a", "bg2": "#0a1628", "bg3": "#0f1f3d",
+        "panel": "#091428", "border": "#1a3a6b", "border2": "#2a5aa0",
+        "accent": "#00d4ff", "accent2": "#0080ff",
+        "green": "#00ff88", "amber": "#ffaa00", "red": "#ff3344",
+        "gray": "#556688", "text": "#c8d8f0", "text2": "#7090b0",
+    },
+    "neon": {
+        "bg": "#0a0015", "bg2": "#120022", "bg3": "#1f0038",
+        "panel": "#0f001f", "border": "#3a006b", "border2": "#5a00a0",
+        "accent": "#ff00ff", "accent2": "#cc00ff",
+        "green": "#00ff88", "amber": "#ffaa00", "red": "#ff3344",
+        "gray": "#664488", "text": "#e0c8f0", "text2": "#9070b0",
+    },
+    "nature": {
+        "bg": "#0a1a0a", "bg2": "#0f220f", "bg3": "#1a3a1a",
+        "panel": "#0d1f0d", "border": "#2a5a2a", "border2": "#3a8a3a",
+        "accent": "#44ff88", "accent2": "#22cc66",
+        "green": "#00ff88", "amber": "#ffaa00", "red": "#ff3344",
+        "gray": "#557755", "text": "#c8e0c8", "text2": "#70a070",
+    },
+    "ocean": {
+        "bg": "#001520", "bg2": "#002030", "bg3": "#003550",
+        "panel": "#001a28", "border": "#004466", "border2": "#0077aa",
+        "accent": "#00ddff", "accent2": "#0099cc",
+        "green": "#00ff88", "amber": "#ffaa00", "red": "#ff3344",
+        "gray": "#336688", "text": "#c0ddee", "text2": "#6090b0",
+    },
+    "sunset": {
+        "bg": "#1a0a05", "bg2": "#2a1008", "bg3": "#3a1a0f",
+        "panel": "#220d06", "border": "#5a2a1a", "border2": "#8a4a2a",
+        "accent": "#ff8844", "accent2": "#ff6633",
+        "green": "#44cc66", "amber": "#ffaa00", "red": "#ff3344",
+        "gray": "#886655", "text": "#f0d8c0", "text2": "#b09070",
+    },
+}
+
+@app.get("/api/admin/settings")
+async def get_settings():
+    return SETTINGS
+
+@app.put("/api/admin/settings")
+async def update_settings(data: dict):
+    SETTINGS.update(data)
+    save_settings(SETTINGS)
+    await broadcast({"type": "settings_update", "settings": SETTINGS, "palettes": PALETTES})
+    return SETTINGS
+
+@app.get("/api/admin/palettes")
+async def get_palettes():
+    return PALETTES
+
+@app.post("/api/admin/reset")
+async def admin_reset():
+    global DEVICES
+    new_devices = generate_demo_city()
+    DEVICES.clear()
+    DEVICES.update(new_devices)
+    save_devices(DEVICES)
+    entry = log_event("system_reset", "ADMIN", "Dispositivos reiniciados a demo")
+    await broadcast({"type": "system_reset", "devices": DEVICES, "log": entry})
+    return {"status": "reset", "count": len(DEVICES)}
+
+@app.get("/api/admin/export")
+async def admin_export():
+    return {"devices": DEVICES, "settings": SETTINGS, "exported_at": datetime.now().isoformat()}
+
+@app.post("/api/admin/broadcast")
+async def admin_broadcast(data: dict):
+    msg_type = data.get("type", "admin_notification")
+    payload = data.get("payload", {})
+    await broadcast({"type": msg_type, **payload})
+    return {"sent": True}
+
+# ─────────────────────────────────────────────
 # STARTUP
 # ─────────────────────────────────────────────
 
