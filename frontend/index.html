@@ -644,6 +644,18 @@
   }
 
   /* ── ADMIN MODAL ── */
+  #admin-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,20,0.8);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #admin-overlay.open { display: flex; }
+
   #admin-modal {
     background: var(--panel);
     border: 1px solid var(--border2);
