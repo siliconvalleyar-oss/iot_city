@@ -40,7 +40,10 @@ IoT City is a smart city device management platform with a simulated Zigbee mesh
 - **Data**: Device state in `data/devices.json`, settings in `data/settings.json`
 
 ## Admin features
-- **Color palette**: 5 themes applied in real-time via CSS custom properties
+- **Color palette**: 5 built-in themes + custom palettes (create/edit/delete via admin modal)
+  - Built-in: cyberpunk, neon, nature, ocean, sunset
+  - Custom: users create with color pickers for all 14 CSS variables
+  - Click built-in palette → applies; click custom palette → opens editor
 - **Settings**: MQTT host, simulation interval, default zoom
 - **Data management**: Export full JSON, reset to demo city
 
