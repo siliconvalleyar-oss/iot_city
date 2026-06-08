@@ -705,6 +705,79 @@
     text-transform: uppercase;
     letter-spacing: 1px;
   }
+
+  .palette-card.add-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--text2);
+    border-style: dashed;
+  }
+
+  .palette-card.add-card:hover { border-color: var(--accent); color: var(--accent); }
+
+  .palette-card .del-btn {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--red);
+    background: var(--panel);
+    color: var(--red);
+    font-size: 9px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .palette-card.custom:hover .del-btn { display: flex; }
+  .palette-card.custom { position: relative; }
+
+  .pe-colors {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+
+  .pe-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .pe-row label {
+    font-size: 8px;
+    color: var(--text2);
+    text-transform: uppercase;
+    width: 50px;
+    flex-shrink: 0;
+  }
+
+  .pe-row input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 9px;
+    padding: 3px 5px;
+    outline: none;
+  }
+
+  .pe-row input:focus { border-color: var(--accent); }
+
+  .pe-row input[type="color"] {
+    width: 24px;
+    height: 24px;
+    padding: 1px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -908,6 +981,23 @@
       <div style="flex:1;min-width:200px">
         <div class="form-label">Paleta de colores</div>
         <div class="palette-grid" id="palette-grid"></div>
+      </div>
+
+      <!-- Palette editor (hidden by default) -->
+      <div id="palette-editor" style="flex:1;min-width:220px;display:none">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div class="form-label" style="margin:0">Editor de paleta</div>
+          <button class="btn" id="pe-cancel" onclick="cancelPaletteEdit()" style="padding:2px 8px;font-size:9px">✕</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input class="form-input" id="pe-name" placeholder="mi-paleta" style="font-size:11px;padding:5px 8px">
+        </div>
+        <div class="pe-colors" id="pe-colors"></div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="btn success" onclick="saveCustomPalette()" style="flex:1;text-align:center;font-size:9px">Guardar paleta</button>
+          <button class="btn danger" id="pe-delete" onclick="deleteCustomPalette()" style="flex:1;text-align:center;font-size:9px;display:none">Eliminar</button>
+        </div>
       </div>
 
       <!-- Settings -->
@@ -1738,22 +1828,34 @@ function openApiDocs() {
 // ──────────────────────────────────────────────────────────────────────────
 
 let palettes = {};
+let customPalettes = {};
 
 async function openAdmin() {
   const res = await apiFetch('/admin/settings');
   const palRes = await apiFetch('/admin/palettes');
   palettes = palRes;
+  customPalettes = res.custom_palettes || {};
 
   document.getElementById('s-mqtt-host').value = res.mqtt_host || 'localhost';
   document.getElementById('s-sim-interval').value = res.sim_interval || 3;
   document.getElementById('s-zoom').value = res.zoom_default || 1;
 
+  renderPaletteGrid(res.palette);
+  document.getElementById('palette-editor').style.display = 'none';
+  document.getElementById('admin-overlay').classList.add('open');
+}
+
+function renderPaletteGrid(activeName) {
   const grid = document.getElementById('palette-grid');
   grid.innerHTML = '';
-  for (const [name, colors] of Object.entries(palRes)) {
+
+  let idx = 0;
+  for (const [name, colors] of Object.entries(palettes)) {
+    const isCustom = !!customPalettes[name];
     const card = document.createElement('div');
-    card.className = 'palette-card' + (name === res.palette ? ' active' : '');
+    card.className = 'palette-card' + (name === activeName ? ' active' : '') + (isCustom ? ' custom' : '');
     card.dataset.name = name;
+    card.style.animationDelay = (idx * 30) + 'ms';
     card.innerHTML = `
       <div class="palette-preview">
         <span style="background:${colors.bg}"></span>
@@ -1763,20 +1865,115 @@ async function openAdmin() {
         <span style="background:${colors.text}"></span>
       </div>
       <div class="palette-name">${name}</div>
+      ${isCustom ? '<button class="del-btn" onclick="event.stopPropagation();editPalette(\'' + name + '\')">✎</button>' : ''}
     `;
     card.onclick = () => {
       document.querySelectorAll('.palette-card').forEach(c => c.classList.remove('active'));
       card.classList.add('active');
+      document.getElementById('palette-editor').style.display = 'none';
       applyPalette(name);
     };
     grid.appendChild(card);
+    idx++;
   }
 
-  document.getElementById('admin-overlay').classList.add('open');
+  // Add card
+  const addCard = document.createElement('div');
+  addCard.className = 'palette-card add-card';
+  addCard.innerHTML = '<span>+</span>';
+  addCard.onclick = () => editPalette(null);
+  grid.appendChild(addCard);
+}
+
+const PALETTE_LABELS = {
+  bg: 'Fondo', bg2: 'Fondo 2', bg3: 'Fondo 3',
+  panel: 'Panel', border: 'Borde', border2: 'Borde 2',
+  accent: 'Acento', accent2: 'Acento 2',
+  green: 'Verde', amber: 'Ámbar', red: 'Rojo',
+  gray: 'Gris', text: 'Texto', text2: 'Texto 2',
+};
+
+function editPalette(name) {
+  const editor = document.getElementById('palette-editor');
+  editor.style.display = 'block';
+
+  const colors = name ? palettes[name] : null;
+  const isCustom = name && customPalettes[name];
+
+  document.getElementById('pe-name').value = name || '';
+  document.getElementById('pe-delete').style.display = isCustom ? 'block' : 'none';
+
+  const container = document.getElementById('pe-colors');
+  container.innerHTML = '';
+  const keys = Object.keys(PALETTE_LABELS);
+  for (const key of keys) {
+    const row = document.createElement('div');
+    row.className = 'pe-row';
+    row.innerHTML = `
+      <label>${PALETTE_LABELS[key]}</label>
+      <input type="color" data-key="${key}" value="${colors ? colors[key] : '#000000'}">
+      <input type="text" data-key="${key}" value="${colors ? colors[key] : '#000000'}" placeholder="#hex">
+    `;
+    const colorInput = row.querySelector('input[type="color"]');
+    const textInput = row.querySelectorAll('input[type="text"]')[0];
+    colorInput.addEventListener('input', () => {
+      textInput.value = colorInput.value;
+    });
+    textInput.addEventListener('input', () => {
+      if (/^#[0-9a-f]{6}$/i.test(textInput.value)) {
+        colorInput.value = textInput.value;
+      }
+    });
+    container.appendChild(row);
+  }
+}
+
+function cancelPaletteEdit() {
+  document.getElementById('palette-editor').style.display = 'none';
+}
+
+async function saveCustomPalette() {
+  const name = document.getElementById('pe-name').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  if (!name || name.length < 2) { notify('Nombre inválido (mín 2 caracteres)', 'err'); return; }
+
+  const colors = {};
+  document.querySelectorAll('#pe-colors .pe-row').forEach(row => {
+    const key = row.querySelector('input[type="color"]').dataset.key;
+    const val = row.querySelector('input[type="text"]').value;
+    colors[key] = val;
+  });
+
+  const res = await apiFetch('/admin/palettes', {
+    method: 'POST',
+    body: JSON.stringify({ name, colors }),
+  });
+
+  if (res.error) { notify('Error: ' + res.error, 'err'); return; }
+
+  palettes[name] = colors;
+  customPalettes[name] = colors;
+  renderPaletteGrid(name);
+  applyPalette(name);
+  document.getElementById('palette-editor').style.display = 'none';
+  notify('Paleta "' + name + '" guardada', 'ok');
+}
+
+async function deleteCustomPalette() {
+  const name = document.getElementById('pe-name').value.trim();
+  if (!name || !confirm('¿Eliminar paleta "' + name + '"?')) return;
+
+  await apiFetch('/admin/palettes/' + encodeURIComponent(name), { method: 'DELETE' });
+  delete palettes[name];
+  delete customPalettes[name];
+  renderPaletteGrid('cyberpunk');
+  applyPalette('cyberpunk');
+  document.getElementById('palette-editor').style.display = 'none';
+  notify('Paleta "' + name + '" eliminada', 'ok');
 }
 
 function closeAdmin() {
   document.getElementById('admin-overlay').classList.remove('open');
+  document.getElementById('palette-editor').style.display = 'none';
 }
 
 async function saveAdmin() {
@@ -1837,6 +2034,7 @@ async function init() {
     loadDevices(),
   ]);
   palettes = palRes;
+  customPalettes = settings.custom_palettes || {};
   const savedPal = palRes[settings.palette] || Object.values(palRes)[0];
   if (savedPal) {
     const root = document.documentElement;

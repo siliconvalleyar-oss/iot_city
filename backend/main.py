@@ -642,7 +642,42 @@ async def update_settings(data: dict):
 
 @app.get("/api/admin/palettes")
 async def get_palettes():
-    return PALETTES
+    custom = SETTINGS.get("custom_palettes", {})
+    merged = dict(PALETTES)
+    merged.update(custom)
+    return merged
+
+PALETTE_KEYS = ["bg", "bg2", "bg3", "panel", "border", "border2", "accent", "accent2", "green", "amber", "red", "gray", "text", "text2"]
+
+@app.post("/api/admin/palettes")
+async def save_palette(data: dict):
+    name = data.get("name", "").strip().lower().replace(" ", "-")
+    colors = data.get("colors", {})
+    if not name or len(name) < 2:
+        return {"error": "Nombre muy corto"}, 400
+    if not all(k in PALETTE_KEYS for k in colors):
+        return {"error": "Faltan colores"}, 400
+    custom = SETTINGS.setdefault("custom_palettes", {})
+    custom[name] = colors
+    save_settings(SETTINGS)
+    merged = dict(PALETTES)
+    merged.update(custom)
+    await broadcast({"type": "settings_update", "settings": SETTINGS, "palettes": merged})
+    return {"status": "saved", "name": name}
+
+@app.delete("/api/admin/palettes/{name}")
+async def delete_palette(name: str):
+    custom = SETTINGS.get("custom_palettes", {})
+    if name in custom:
+        del custom[name]
+        save_settings(SETTINGS)
+    merged = dict(PALETTES)
+    merged.update(custom)
+    if SETTINGS.get("palette") == name:
+        SETTINGS["palette"] = "cyberpunk"
+        save_settings(SETTINGS)
+    await broadcast({"type": "settings_update", "settings": SETTINGS, "palettes": merged})
+    return {"status": "deleted", "name": name}
 
 @app.post("/api/admin/reset")
 async def admin_reset():
