@@ -16,9 +16,9 @@ ok()    { echo -e "${GREEN}[ OK ]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 err()   { echo -e "${RED}[ERR]${NC} $1" >&2; exit 1; }
 
-# Detectar directorio del proyecto (donde está este script)
+# Detectar directorio del proyecto (raíz del proyecto)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 log "Proyecto ubicado en: $PROJECT_ROOT"
 

@@ -116,8 +116,16 @@ start() {
         source "$VENV_DIR/bin/activate"
         ok "Entorno virtual activado"
     else
-        warn "Entorno virtual no encontrado — usando Python del sistema"
-        warn "Ejecuta ./install_system.sh para instalación completa"
+        warn "Entorno virtual no encontrado — creando uno automáticamente..."
+        python3 -m venv "$VENV_DIR" 2>/dev/null || {
+            err "No se pudo crear el entorno virtual. Ejecuta: ./install_system.sh"
+            exit 1
+        }
+        source "$VENV_DIR/bin/activate"
+        warn "Instalando dependencias (esto tomará un momento)..."
+        python -m pip install --upgrade pip -q
+        python -m pip install fastapi uvicorn paho-mqtt pydantic python-multipart websockets -q
+        ok "Entorno virtual creado y dependencias instaladas"
     fi
 
     # 1. MQTT

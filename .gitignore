@@ -50,6 +50,13 @@ logs/
 token.md
 fix.sh
 prompt.md
+prompt.txt
+
+# Métricas generadas automáticamente
+data/metrics/
+
+# Entorno y configuración local
+.env
 
 # Directorios de salida
 analytics/__pycache__/
