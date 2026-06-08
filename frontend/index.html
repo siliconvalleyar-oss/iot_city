@@ -978,30 +978,29 @@
 
     <div style="display:flex;gap:16px;flex-wrap:wrap">
       <!-- Palette -->
-      <div style="flex:1;min-width:200px">
+      <div style="flex:2;min-width:240px">
         <div class="form-label">Paleta de colores</div>
         <div class="palette-grid" id="palette-grid"></div>
-      </div>
-
-      <!-- Palette editor (hidden by default) -->
-      <div id="palette-editor" style="flex:1;min-width:220px;display:none">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <div class="form-label" style="margin:0">Editor de paleta</div>
-          <button class="btn" id="pe-cancel" onclick="cancelPaletteEdit()" style="padding:2px 8px;font-size:9px">✕</button>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Nombre</label>
-          <input class="form-input" id="pe-name" placeholder="mi-paleta" style="font-size:11px;padding:5px 8px">
-        </div>
-        <div class="pe-colors" id="pe-colors"></div>
-        <div style="display:flex;gap:6px;margin-top:8px">
-          <button class="btn success" onclick="saveCustomPalette()" style="flex:1;text-align:center;font-size:9px">Guardar paleta</button>
-          <button class="btn danger" id="pe-delete" onclick="deleteCustomPalette()" style="flex:1;text-align:center;font-size:9px;display:none">Eliminar</button>
+        <!-- Palette editor (hidden by default), dentro de la misma columna -->
+        <div id="palette-editor" style="margin-top:8px;display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div class="form-label" style="margin:0">Editor de paleta</div>
+            <button class="btn" id="pe-cancel" onclick="cancelPaletteEdit()" style="padding:2px 8px;font-size:9px">✕</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input class="form-input" id="pe-name" placeholder="mi-paleta" style="font-size:11px;padding:5px 8px">
+          </div>
+          <div class="pe-colors" id="pe-colors"></div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn success" onclick="saveCustomPalette()" style="flex:1;text-align:center;font-size:9px">Guardar paleta</button>
+            <button class="btn danger" id="pe-delete" onclick="deleteCustomPalette()" style="flex:1;text-align:center;font-size:9px;display:none">Eliminar</button>
+          </div>
         </div>
       </div>
 
       <!-- Settings -->
-      <div style="flex:1;min-width:200px">
+      <div style="flex:1;min-width:180px">
         <div class="form-group">
           <label class="form-label">Host MQTT</label>
           <input class="form-input" id="s-mqtt-host" value="localhost">
@@ -1017,7 +1016,7 @@
       </div>
 
       <!-- Data management -->
-      <div style="flex:1;min-width:200px">
+      <div style="flex:1;min-width:160px">
         <div class="form-label">Datos</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
           <button class="btn success" onclick="exportData()" style="text-align:center">📥 Exportar JSON</button>
